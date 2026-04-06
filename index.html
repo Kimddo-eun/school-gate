@@ -751,8 +751,13 @@ async function load() {
     if (!res.ok) throw new Error('fetch failed');
     const csv = await res.text();
     const rows = parseCSV(csv);
-    // 첫 번째 행은 헤더이므로 제외, 학교명이 비어있는 행도 제외
-    allData = rows.slice(1).filter(r => val(r, COL.school) !== '');
+    // 학교명이 비어있는 행과 헤더 행만 제외
+    const headerWords = ['학교', '학교명', '이미지', 'school', 'name', 'university'];
+    allData = rows.filter(r => {
+      const s = val(r, COL.school);
+      if (!s) return false;
+      return !headerWords.includes(s.toLowerCase());
+    });
     render();
   } catch (e) {
     document.getElementById('grid').innerHTML =
