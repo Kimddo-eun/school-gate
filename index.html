@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>School Gate Archive</title>
+<title>대학 정문 아카이브</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -519,7 +519,7 @@
 // ============================================================
 // CONFIG — 여기에 Google Sheet CSV URL을 붙여넣으세요
 // ============================================================
-const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1myKTpXM_E1d8GBGaxShIsX3UqYJwP1aS407ODT7iawE/gviz/tq?tqx=out:csv&gid=1648520092';
+const SHEET_URL = ' https://docs.google.com/spreadsheets/d/1myKTpXM_E1d8GBGaxShIsX3UqYJwP1aS407ODT7iawE/gviz/tq?tqx=out:csv&gid=1648520092';
 // 예: 'https://docs.google.com/spreadsheets/d/XXXX/gviz/tq?tqx=out:csv&sheet=Sheet1'
 
 // 컬럼 인덱스 (0-based)
@@ -530,22 +530,31 @@ const COL = { img:0, school:1, location:2, date:3, size:4, symbol:5, gate:6, veh
 
 let allData = [];
 
-// CSV 파싱 (콤마·따옴표 대응)
+// CSV 파싱 — 셀 안의 줄바꿈·따옴표·콤마 모두 정확히 처리
 function parseCSV(text) {
   const rows = [];
-  const lines = text.trim().split(/\r?\n/);
-  for (const line of lines) {
-    const cols = [];
-    let cur = '', inQ = false;
-    for (let i = 0; i < line.length; i++) {
-      const c = line[i];
-      if (c === '"') { inQ = !inQ; }
-      else if (c === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
-      else { cur += c; }
+  let cols = [], cur = '', inQ = false;
+  const n = text.length;
+  for (let i = 0; i < n; i++) {
+    const c = text[i];
+    const next = text[i + 1];
+    if (inQ) {
+      if (c === '"' && next === '"') { cur += '"'; i++; }       // escaped quote ""
+      else if (c === '"') { inQ = false; }                       // closing quote
+      else { cur += c; }                                         // content (incl. \n)
+    } else {
+      if (c === '"') { inQ = true; }                             // opening quote
+      else if (c === ',') { cols.push(cur.trim()); cur = ''; }  // column separator
+      else if (c === '\n' || (c === '\r' && next === '\n')) {   // row separator
+        if (c === '\r') i++;
+        cols.push(cur.trim());
+        if (cols.some(v => v !== '')) rows.push(cols);          // skip blank rows
+        cols = []; cur = '';
+      } else { cur += c; }
     }
-    cols.push(cur.trim());
-    rows.push(cols);
   }
+  cols.push(cur.trim());
+  if (cols.some(v => v !== '')) rows.push(cols);
   return rows;
 }
 
@@ -742,8 +751,11 @@ async function load() {
     if (!res.ok) throw new Error('fetch failed');
     const csv = await res.text();
     const rows = parseCSV(csv);
-    // 첫 행이 헤더면 제거 (학교명이 들어있는지 확인)
-    allData = rows.filter(r => val(r, COL.school));
+    const headerWords = ['학교','이미지','school','name','university'];
+    allData = rows.filter(r => {
+      const s = val(r, COL.school).toLowerCase();
+      return s && !headerWords.includes(s);
+    });
     render();
   } catch (e) {
     document.getElementById('grid').innerHTML =
