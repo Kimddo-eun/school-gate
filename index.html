@@ -519,7 +519,7 @@
 // ============================================================
 // CONFIG — 여기에 Google Sheet CSV URL을 붙여넣으세요
 // ============================================================
-const SHEET_URL = ' https://docs.google.com/spreadsheets/d/1myKTpXM_E1d8GBGaxShIsX3UqYJwP1aS407ODT7iawE/gviz/tq?tqx=out:csv&gid=1648520092';
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1myKTpXM_E1d8GBGaxShIsX3UqYJwP1aS407ODT7iawE/gviz/tq?tqx=out:csv&gid=1648520092';
 // 예: 'https://docs.google.com/spreadsheets/d/XXXX/gviz/tq?tqx=out:csv&sheet=Sheet1'
 
 // 컬럼 인덱스 (0-based)
@@ -545,8 +545,8 @@ function parseCSV(text) {
     } else {
       if (c === '"') { inQ = true; }                             // opening quote
       else if (c === ',') { cols.push(cur.trim()); cur = ''; }  // column separator
-      else if (c === '\n' || (c === '\r' && next === '\n')) {   // row separator
-        if (c === '\r') i++;
+      else if (c === '\n' || c === '\r') {                      // row separator (\n, \r\n, \r 모두 처리)
+        if (c === '\r' && next === '\n') i++;
         cols.push(cur.trim());
         if (cols.some(v => v !== '')) rows.push(cols);          // skip blank rows
         cols = []; cur = '';
@@ -751,11 +751,8 @@ async function load() {
     if (!res.ok) throw new Error('fetch failed');
     const csv = await res.text();
     const rows = parseCSV(csv);
-    const headerWords = ['학교','이미지','school','name','university'];
-    allData = rows.filter(r => {
-      const s = val(r, COL.school).toLowerCase();
-      return s && !headerWords.includes(s);
-    });
+    // 첫 번째 행은 헤더이므로 제외, 학교명이 비어있는 행도 제외
+    allData = rows.slice(1).filter(r => val(r, COL.school) !== '');
     render();
   } catch (e) {
     document.getElementById('grid').innerHTML =
