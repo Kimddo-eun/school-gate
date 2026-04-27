@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../../26:3학년/사문디(1)/SheetCMS"
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "SheetCMS"
+	}
+}
