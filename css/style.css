@@ -1,0 +1,209 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --surface: #FFFFFF;
+  --border:  #E2DDD6;
+  --text:    #1A1816;
+  --muted:   #8A8580;
+  --accent:  #2B4C8C;
+  --accent-light: #E8EDF6;
+}
+
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: #f0ede8;
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* ── LOADER ── */
+#loader {
+  position: fixed; inset: 0;
+  background: #f0ede8;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 1.25rem;
+  z-index: 9999;
+  transition: opacity 0.5s, visibility 0.5s;
+}
+#loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+.ld-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 1rem; letter-spacing: 0.12em;
+  color: var(--accent);
+}
+.ld-bar {
+  width: 220px; height: 2px;
+  background: var(--border); border-radius: 2px;
+}
+.ld-fill {
+  height: 100%; background: var(--accent);
+  border-radius: 2px; width: 0%;
+  transition: width 0.3s ease;
+}
+.ld-msg { font-size: 0.74rem; color: var(--muted); letter-spacing: 0.04em; }
+
+/* ── HEADER ── */
+#hdr {
+  position: fixed; top: 0; left: 0; right: 0; height: 52px;
+  background: rgba(255,255,255,0.96);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.5rem;
+  z-index: 500;
+}
+#hdr-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.88rem; letter-spacing: 0.08em; color: var(--text);
+}
+#hdr-sub {
+  font-size: 0.58rem; color: var(--muted);
+  letter-spacing: 0.08em; margin-top: 0.15rem;
+}
+#count-badge {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem; color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.28rem 0.7rem;
+  border-radius: 20px; letter-spacing: 0.04em;
+}
+
+/* ── MAP ── */
+#map {
+  position: fixed;
+  top: 52px; left: 0; right: 0; bottom: 0;
+}
+
+/* Leaflet attribution 스타일 보정 */
+.leaflet-control-attribution {
+  font-size: 0.6rem !important;
+  background: rgba(255,255,255,0.7) !important;
+}
+
+/* ── GATE MARKER ── */
+.gate-marker-wrap {
+  width: 64px; height: 64px;
+  border-radius: 50%; overflow: hidden;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.22);
+  cursor: pointer;
+  background: var(--accent-light);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.gate-marker-wrap:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 18px rgba(43,76,140,0.45);
+}
+.gate-marker-wrap img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.gate-marker-placeholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.52rem; font-weight: 500;
+  color: var(--accent); text-align: center; padding: 4px;
+  line-height: 1.3;
+}
+
+/* Leaflet 툴팁 */
+.gate-tip {
+  background: rgba(26,24,22,0.85) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  color: #fff !important;
+  font-family: 'Noto Sans KR', sans-serif !important;
+  font-size: 0.72rem !important;
+  padding: 4px 8px !important;
+  white-space: nowrap !important;
+  box-shadow: none !important;
+}
+.gate-tip::before { display: none !important; }
+
+/* ── MODAL ── */
+#overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1.5rem;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.22s;
+}
+#overlay.active { opacity: 1; pointer-events: all; }
+
+#modal {
+  background: var(--surface);
+  border-radius: 16px;
+  max-width: 680px; width: 100%;
+  max-height: 88vh; overflow-y: auto;
+  position: relative;
+  transform: translateY(14px);
+  transition: transform 0.22s;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+#overlay.active #modal { transform: translateY(0); }
+
+#m-close {
+  position: absolute; top: 0.75rem; right: 0.75rem;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid var(--border); color: var(--muted);
+  width: 32px; height: 32px; border-radius: 50%;
+  cursor: pointer; font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10; transition: background 0.15s;
+}
+#m-close:hover { background: #fff; color: var(--text); }
+
+#m-img-wrap { position: relative; }
+#m-img {
+  width: 100%; max-height: 340px;
+  object-fit: cover; display: block;
+  border-radius: 16px 16px 0 0;
+  background: #eae7e0;
+}
+#m-img[src=""] { display: none; }
+#m-img-none {
+  display: none;
+  height: 160px; border-radius: 16px 16px 0 0;
+  background: linear-gradient(135deg, #eae7e0, #d8d4cc);
+  align-items: center; justify-content: center;
+  font-size: 0.82rem; color: var(--muted);
+}
+#m-img-none.show { display: flex; }
+
+#m-body { padding: 1.5rem 1.75rem 2rem; }
+#m-name { font-size: 1.3rem; font-weight: 600; margin-bottom: 0.25rem; }
+#m-loc  { font-size: 0.82rem; color: var(--muted); margin-bottom: 1rem; }
+
+#m-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 1.1rem; }
+.m-tag {
+  font-size: 0.68rem; padding: 0.2rem 0.6rem;
+  border-radius: 20px; font-weight: 500;
+}
+.m-tag-open    { background: #e6f4ec; color: #1a5c3a; }
+.m-tag-closed  { background: #f9ecec; color: #7a1e1e; }
+.m-tag-partial { background: #fbf4e6; color: #7a5c1a; }
+.m-tag-vehicle { background: #f0ebf8; color: #5b3a82; }
+.m-tag-beam    { background: #fff0e6; color: #7a4010; }
+.m-tag-default { background: #eef0f4; color: #3d4a62; }
+
+#m-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1.5rem;
+}
+.m-field label {
+  font-size: 0.62rem; color: var(--muted);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  display: block; margin-bottom: 0.2rem;
+}
+.m-field p { font-size: 0.82rem; line-height: 1.65; color: var(--text); }
+
+/* 긴 텍스트는 전체 너비 */
+.m-field.full { grid-column: 1 / -1; }
+
+@media (max-width: 480px) {
+  #m-grid { grid-template-columns: 1fr; }
+  #m-body { padding: 1.25rem 1.25rem 1.5rem; }
+}
