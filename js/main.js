@@ -10,9 +10,9 @@ const SHEET_URL =
 function toImgUrl(url) {
   if (!url) return '';
   const m1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if (m1) return `https://drive.google.com/uc?export=view&id=${m1[1]}`;
+  if (m1) return `https://drive.google.com/thumbnail?id=${m1[1]}&sz=w800`;
   const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (m2) return `https://drive.google.com/uc?export=view&id=${m2[1]}`;
+  if (m2) return `https://drive.google.com/thumbnail?id=${m2[1]}&sz=w800`;
   return url;
 }
 
