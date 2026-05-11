@@ -224,14 +224,17 @@ function openModal(row) {
     return url ? `<a href="${url}" target="_blank" rel="noopener noreferrer">${v}</a>` : v;
   }
 
+  // M(12)=공사역사링크, N(13)=학생역사링크, O(14)=설치일링크, P(15)=상징성링크
   const constHistUrl   = safeUrl(row[12] || '');
   const studentHistUrl = safeUrl(row[13] || '');
+  const dateUrl        = safeUrl(row[14] || '');
+  const symbolUrl      = safeUrl(row[15] || '');
 
   const fields = [
-    ['설치일',    date,        '',            false],
-    ['크기',      size,        '',            false],
-    ['상징성',    symbol,      '',            true],
-    ['공사 역사', constHist,   constHistUrl,  true],
+    ['설치일',    date,        dateUrl,        false],
+    ['크기',      size,        '',             false],
+    ['상징성',    symbol,      symbolUrl,      true],
+    ['공사 역사', constHist,   constHistUrl,   true],
     ['학생 역사', studentHist, studentHistUrl, true],
   ].filter(([, v]) => v);
   document.getElementById('m-grid').innerHTML = fields.map(([l, v, url, full]) =>
