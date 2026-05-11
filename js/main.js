@@ -303,24 +303,38 @@ function updateTimeDisplay() {
 }
 
 function initTimeControl() {
-  const tcInput = document.getElementById('tc-input');
-  const tcReset = document.getElementById('tc-reset');
-  tcInput.addEventListener('change', () => {
-    if (!tcInput.value) { testTime = null; }
-    else {
-      const [h, m] = tcInput.value.split(':').map(Number);
-      testTime = new Date();
-      testTime.setHours(h, m, 0, 0);
-    }
+  const tcSlider = document.getElementById('tc-slider');
+  const tcLabel  = document.getElementById('tc-label');
+  const tcReset  = document.getElementById('tc-reset');
+
+  function minToStr(m) {
+    return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  }
+  function snapToNow() {
+    const n = new Date();
+    return Math.round((n.getHours() * 60 + n.getMinutes()) / 30) * 30;
+  }
+
+  tcSlider.value = snapToNow();
+
+  tcSlider.addEventListener('input', () => {
+    const m = parseInt(tcSlider.value);
+    testTime = new Date();
+    testTime.setHours(Math.floor(m / 60), m % 60, 0, 0);
+    tcLabel.textContent = minToStr(m);
     updateLockedCards();
     updateTimeDisplay();
   });
+
   tcReset.addEventListener('click', () => {
-    testTime = null; tcInput.value = '';
-    updateLockedCards(); updateTimeDisplay();
+    testTime = null;
+    tcSlider.value = snapToNow();
+    tcLabel.textContent = '실제 시간';
+    updateLockedCards();
+    updateTimeDisplay();
   });
+
   updateTimeDisplay();
-  // 실제 시간 사용 중에는 30초마다 상태 갱신
   setInterval(() => { if (!testTime) { updateLockedCards(); updateTimeDisplay(); } }, 30000);
 }
 

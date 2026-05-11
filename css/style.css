@@ -222,11 +222,13 @@ body {
   font-size: 0.62rem; color: var(--muted); letter-spacing: 0.03em;
   white-space: nowrap;
 }
-.tc-row { display: flex; gap: 0.3rem; align-items: center; }
-#tc-input {
-  font-size: 0.65rem; padding: 0.18rem 0.4rem;
-  border: 1px solid var(--border); border-radius: 6px;
-  background: var(--surface); color: var(--text); cursor: pointer;
+.tc-row { display: flex; gap: 0.4rem; align-items: center; }
+#tc-label {
+  font-size: 0.65rem; color: var(--text); min-width: 3.4rem;
+  text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+#tc-slider {
+  width: 110px; cursor: pointer; accent-color: var(--accent);
 }
 #tc-reset {
   font-size: 0.62rem; padding: 0.18rem 0.5rem;
