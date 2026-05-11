@@ -485,9 +485,7 @@ function resolveOverlaps(items) {
 function placeCard({ row, x, y }) {
   const school = row[1] || '';
   const imgUrl = toImgUrl(row[0] || '');
-  const shortName = school
-    .replace(/(캠퍼스|대학교|대학|서울|인문사회과학|글로벌|북악|성심교정|석관동|죽전|용봉|아라|송도|천안|수원|경산|돈암수정)/g, '')
-    .trim();
+  const shortName = school;
 
   const card = document.createElement('div');
   card.className = 'gate-card';
