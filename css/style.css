@@ -206,6 +206,17 @@ body {
 .m-field p { font-size: 0.82rem; line-height: 1.65; color: var(--text); }
 .m-field.full { grid-column: 1 / -1; }
 
+/* ── ZOOM FOCUS ── */
+@keyframes zoom-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(43,76,140,0.55), 0 4px 18px rgba(43,76,140,0.35); }
+  50%       { box-shadow: 0 0 0 6px rgba(43,76,140,0.25), 0 6px 28px rgba(43,76,140,0.55); }
+}
+.gate-card.zoom-focus {
+  border-color: var(--accent) !important;
+  animation: zoom-pulse 1.1s ease-in-out infinite;
+  z-index: 50 !important;
+}
+
 @media (max-width: 480px) {
   #m-grid { grid-template-columns: 1fr; }
   #m-body { padding: 1.25rem 1.25rem 1.5rem; }

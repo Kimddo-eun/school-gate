@@ -7,7 +7,6 @@ const SHEET_URL =
 
 // ── 좌표계: 남한 영역을 픽셀로 변환 ───────────────────────────────
 const GEO = { minLat: 33.0, maxLat: 38.7, minLng: 124.5, maxLng: 131.0 };
-// 36°N 기준 경도 1° ≈ 89.8km, 위도 1° ≈ 111km (Mercator 보정)
 const KM_LNG = 111 * Math.cos(36 * Math.PI / 180);
 const KM_LAT = 111;
 const STAGE_W = 1400;
@@ -23,6 +22,65 @@ function latLngToXY(lat, lng) {
   };
 }
 
+// ── 남한 영토 윤곽선 (위도, 경도 좌표) ────────────────────────────
+const KOREA_BOUNDARY = [
+  // 북쪽 경계 (서→동)
+  [37.80, 126.40], [38.00, 126.52], [38.20, 126.90],
+  [38.38, 127.38], [38.54, 127.85], [38.62, 128.37],
+  // 강원 동해안 (북→남)
+  [38.17, 128.62], [37.95, 128.75], [37.52, 129.10],
+  // 경북 동해안
+  [37.25, 129.28], [36.82, 129.44], [36.42, 129.45],
+  // 경남 동해안 및 부산
+  [36.05, 129.42], [35.73, 129.38], [35.48, 129.36],
+  [35.22, 129.20], [35.10, 129.00],
+  // 부산·남해안
+  [35.05, 128.98], [34.90, 128.72], [34.75, 128.58],
+  // 경남 남해안
+  [34.70, 128.25], [34.60, 127.92], [34.68, 127.68],
+  [34.50, 127.50], [34.40, 127.32], [34.28, 127.15],
+  // 전남 남해안
+  [34.27, 126.78], [34.23, 126.55],
+  // 서남해
+  [34.48, 126.25], [34.73, 126.10],
+  // 서해안 (남→북)
+  [35.08, 126.33], [35.47, 126.36], [35.83, 126.49],
+  [36.10, 126.43], [36.45, 126.45], [36.82, 126.18],
+  [37.05, 126.38], [37.30, 126.43], [37.50, 126.48],
+  [37.70, 126.36], [37.80, 126.40],
+];
+
+const JEJU_BOUNDARY = [
+  [33.56, 126.15], [33.58, 126.42], [33.53, 126.70],
+  [33.44, 126.94], [33.24, 126.93], [33.22, 126.68],
+  [33.25, 126.35], [33.36, 126.12], [33.56, 126.15],
+];
+
+function drawKoreaOutline() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', STAGE_W);
+  svg.setAttribute('height', STAGE_H);
+  svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;';
+
+  function makePoly(boundary) {
+    const pts = boundary.map(([lat, lng]) => {
+      const { x, y } = latLngToXY(lat, lng);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    poly.setAttribute('points', pts.join(' '));
+    poly.setAttribute('fill', 'rgba(43,76,140,0.06)');
+    poly.setAttribute('stroke', 'rgba(43,76,140,0.20)');
+    poly.setAttribute('stroke-width', '4');
+    poly.setAttribute('stroke-linejoin', 'round');
+    return poly;
+  }
+
+  svg.appendChild(makePoly(KOREA_BOUNDARY));
+  svg.appendChild(makePoly(JEJU_BOUNDARY));
+  stage.appendChild(svg);
+}
+
 // ── 유틸 ──────────────────────────────────────────────────────────
 function toImgUrl(url) {
   if (!url) return '';
@@ -36,6 +94,49 @@ function toImgUrl(url) {
 function setProgress(pct, msg) {
   document.getElementById('ld-fill').style.width = pct + '%';
   if (msg) document.getElementById('ld-msg').textContent = msg;
+}
+
+// ── 줌 → 모달 ─────────────────────────────────────────────────────
+const ZOOM_HINT  = 2.5;  // 이 배율부터 카드 강조
+const ZOOM_MODAL = 4.2;  // 이 배율에서 자동 모달 열기
+const cardData   = [];   // { el, cx, cy } 스테이지 좌표계 기준 카드 중심
+
+let zoomFocusCard = null;
+let zoomModalDone = false;
+
+function updateZoomFocus(canOpen) {
+  const vx = stageWrap.clientWidth  / 2;
+  const vy = stageWrap.clientHeight / 2;
+
+  if (scale < ZOOM_HINT) {
+    if (zoomFocusCard) { zoomFocusCard.classList.remove('zoom-focus'); zoomFocusCard = null; }
+    if (scale < ZOOM_MODAL) zoomModalDone = false;
+    return;
+  }
+
+  // 뷰포트 중심에 가장 가까운 카드 찾기 (스테이지 좌표 → 화면 좌표 변환)
+  let closest = null, minDist = Infinity;
+  cardData.forEach(({ el, cx, cy }) => {
+    const sx = cx * scale + tx;
+    const sy = cy * scale + ty;
+    const d  = Math.hypot(sx - vx, sy - vy);
+    if (d < minDist) { minDist = d; closest = el; }
+  });
+
+  if (closest !== zoomFocusCard) {
+    if (zoomFocusCard) zoomFocusCard.classList.remove('zoom-focus');
+    zoomFocusCard = closest;
+    zoomModalDone = false;
+    if (closest) closest.classList.add('zoom-focus');
+  }
+
+  if (scale < ZOOM_MODAL) zoomModalDone = false;
+
+  if (canOpen && scale >= ZOOM_MODAL && !zoomModalDone && closest) {
+    zoomModalDone = true;
+    const target = closest;
+    setTimeout(() => { if (zoomFocusCard === target) target.click(); }, 150);
+  }
 }
 
 // ── 모달 ──────────────────────────────────────────────────────────
@@ -114,7 +215,6 @@ function applyTransform() {
   stage.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
 }
 
-// 카드 전체 배치 영역에 맞게 초기 뷰 설정
 function fitToCards(pts) {
   if (!pts.length) return;
   const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
@@ -140,6 +240,7 @@ stageWrap.addEventListener('wheel', e => {
   ty = my - (my - ty) * f;
   scale = Math.max(0.15, Math.min(10, scale * f));
   applyTransform();
+  updateZoomFocus(true);
 }, { passive: false });
 
 // 드래그 팬
@@ -153,6 +254,7 @@ window.addEventListener('mousemove', e => {
   if (!drag) return;
   tx = e.clientX - drag.sx; ty = e.clientY - drag.sy;
   applyTransform();
+  updateZoomFocus(false);
 });
 window.addEventListener('mouseup', () => { drag = null; stageWrap.classList.remove('dragging'); });
 
@@ -169,6 +271,8 @@ stageWrap.addEventListener('touchmove', e => {
   if (cur.length === 1 && lastTouches.length >= 1) {
     tx += cur[0].clientX - lastTouches[0].x;
     ty += cur[0].clientY - lastTouches[0].y;
+    applyTransform();
+    updateZoomFocus(false);
   } else if (cur.length >= 2 && lastTouches.length >= 2) {
     const od = Math.hypot(lastTouches[1].x - lastTouches[0].x, lastTouches[1].y - lastTouches[0].y);
     const nd = Math.hypot(cur[1].clientX - cur[0].clientX, cur[1].clientY - cur[0].clientY);
@@ -178,9 +282,10 @@ stageWrap.addEventListener('touchmove', e => {
     const my = (cur[0].clientY + cur[1].clientY) / 2 - r.top;
     tx = mx - (mx - tx) * f; ty = my - (my - ty) * f;
     scale = Math.max(0.15, Math.min(10, scale * f));
+    applyTransform();
+    updateZoomFocus(true);
   }
   lastTouches = cur.map(t => ({ x: t.clientX, y: t.clientY }));
-  applyTransform();
 }, { passive: false });
 stageWrap.addEventListener('touchend', e => {
   lastTouches = [...e.touches].map(t => ({ x: t.clientX, y: t.clientY }));
@@ -249,6 +354,7 @@ function placeCard({ row, x, y }) {
 
   card.addEventListener('click', () => openModal(row));
   stage.appendChild(card);
+  cardData.push({ el: card, cx: x, cy: y });
 }
 
 // ── 데이터 로드 ───────────────────────────────────────────────────
@@ -297,4 +403,5 @@ async function load() {
   }
 }
 
+drawKoreaOutline();
 load();
