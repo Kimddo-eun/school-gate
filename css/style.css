@@ -213,6 +213,72 @@ body {
 .m-field p a:hover { opacity: 0.75; }
 .m-field.full { grid-column: 1 / -1; }
 
+/* ── TIME CONTROL ── */
+#time-ctrl {
+  display: flex; flex-direction: column; align-items: flex-end;
+  gap: 0.18rem; margin-right: 0.75rem;
+}
+#tc-status {
+  font-size: 0.62rem; color: var(--muted); letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+.tc-row { display: flex; gap: 0.3rem; align-items: center; }
+#tc-input {
+  font-size: 0.65rem; padding: 0.18rem 0.4rem;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); color: var(--text); cursor: pointer;
+}
+#tc-reset {
+  font-size: 0.62rem; padding: 0.18rem 0.5rem;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); color: var(--muted); cursor: pointer;
+}
+#tc-reset:hover { background: var(--accent-light); color: var(--accent); }
+
+/* ── TIME-LOCKED CARD ── */
+.gate-card.time-locked { filter: grayscale(0.55) brightness(0.72); }
+.gate-card-lock {
+  position: absolute; top: 4px; right: 4px;
+  width: 18px; height: 18px;
+  background: rgba(0,0,0,0.62); border-radius: 50%;
+  display: none; align-items: center; justify-content: center;
+  font-size: 9px; z-index: 5;
+}
+.gate-card.time-locked .gate-card-lock { display: flex; }
+
+/* ── BLOCKED OVERLAY ── */
+#blocked-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 1100;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1.5rem;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.22s;
+}
+#blocked-overlay.active { opacity: 1; pointer-events: all; }
+#blocked-card {
+  background: var(--surface); border-radius: 16px;
+  max-width: 300px; width: 100%;
+  padding: 2.25rem 1.75rem 2rem;
+  text-align: center; position: relative;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.22);
+  transform: translateY(14px); transition: transform 0.22s;
+}
+#blocked-overlay.active #blocked-card { transform: translateY(0); }
+#blocked-close {
+  position: absolute; top: 0.75rem; right: 0.75rem;
+  background: rgba(255,255,255,0.9); border: 1px solid var(--border);
+  color: var(--muted); width: 32px; height: 32px; border-radius: 50%;
+  cursor: pointer; font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+}
+#blocked-close:hover { background: #fff; color: var(--text); }
+.bl-icon { font-size: 2.4rem; margin-bottom: 0.6rem; }
+#bl-name { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+.bl-msg  { font-size: 0.88rem; color: var(--text); margin-bottom: 0.3rem; }
+.bl-hours { font-size: 0.72rem; color: var(--muted); }
+
 /* ── ZOOM FOCUS ── */
 @keyframes zoom-pulse {
   0%, 100% { box-shadow: 0 0 0 3px rgba(43,76,140,0.55), 0 4px 18px rgba(43,76,140,0.35); }

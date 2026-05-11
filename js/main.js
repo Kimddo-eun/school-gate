@@ -251,7 +251,76 @@ function closeModal() {
 }
 document.getElementById('m-close').addEventListener('click', closeModal);
 overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeBlockedModal(); } });
+
+// ── 시간 제한 ──────────────────────────────────────────────────────
+// startH 이상 endH 미만(시 단위)에만 접근 허용
+const ACCESS_RULES = {
+  '덕성여자대학교': { startH: 9, endH: 21, label: '09:00 – 21:00' },
+};
+let testTime = null; // null이면 실제 시간 사용
+
+function isAccessible(school) {
+  const rule = ACCESS_RULES[school];
+  if (!rule) return true;
+  const now = testTime || new Date();
+  const min = now.getHours() * 60 + now.getMinutes();
+  return min >= rule.startH * 60 && min < rule.endH * 60;
+}
+
+function openBlockedModal(school) {
+  const rule = ACCESS_RULES[school] || {};
+  document.getElementById('bl-name').textContent  = school;
+  document.getElementById('bl-hours').textContent = rule.label ? `개방 시간 ${rule.label}` : '';
+  document.getElementById('blocked-overlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function closeBlockedModal() {
+  document.getElementById('blocked-overlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.getElementById('blocked-close').addEventListener('click', closeBlockedModal);
+document.getElementById('blocked-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('blocked-overlay')) closeBlockedModal();
+});
+
+function updateLockedCards() {
+  cardData.forEach(({ el, school }) => {
+    if (ACCESS_RULES[school]) el.classList.toggle('time-locked', !isAccessible(school));
+  });
+}
+
+function updateTimeDisplay() {
+  const now   = testTime || new Date();
+  const hh    = String(now.getHours()).padStart(2, '0');
+  const mm    = String(now.getMinutes()).padStart(2, '0');
+  const open  = isAccessible('덕성여자대학교');
+  const pfx   = testTime ? '⚙ ' : '';
+  document.getElementById('tc-status').textContent =
+    `${pfx}${hh}:${mm} · 덕성여대 ${open ? '🟢 개방' : '🔴 폐쇄'}`;
+}
+
+function initTimeControl() {
+  const tcInput = document.getElementById('tc-input');
+  const tcReset = document.getElementById('tc-reset');
+  tcInput.addEventListener('change', () => {
+    if (!tcInput.value) { testTime = null; }
+    else {
+      const [h, m] = tcInput.value.split(':').map(Number);
+      testTime = new Date();
+      testTime.setHours(h, m, 0, 0);
+    }
+    updateLockedCards();
+    updateTimeDisplay();
+  });
+  tcReset.addEventListener('click', () => {
+    testTime = null; tcInput.value = '';
+    updateLockedCards(); updateTimeDisplay();
+  });
+  updateTimeDisplay();
+  // 실제 시간 사용 중에는 30초마다 상태 갱신
+  setInterval(() => { if (!testTime) { updateLockedCards(); updateTimeDisplay(); } }, 30000);
+}
 
 // ── 줌/팬 ──────────────────────────────────────────────────────────
 const stageWrap = document.getElementById('stage-wrap');
@@ -427,9 +496,19 @@ function placeCard({ row, x, y }) {
   nameDiv.className = 'gate-card-name'; nameDiv.textContent = shortName;
   card.appendChild(nameDiv);
 
-  card.addEventListener('click', () => openModal(row));
+  if (ACCESS_RULES[school]) {
+    const lock = document.createElement('div');
+    lock.className = 'gate-card-lock';
+    lock.textContent = '🔒';
+    card.appendChild(lock);
+  }
+
+  card.addEventListener('click', () => {
+    if (!isAccessible(school)) { openBlockedModal(school); return; }
+    openModal(row);
+  });
   stage.appendChild(card);
-  cardData.push({ el: card, cx: x, cy: y });
+  cardData.push({ el: card, cx: x, cy: y, school });
 }
 
 // ── 데이터 로드 ───────────────────────────────────────────────────
@@ -467,6 +546,7 @@ async function load() {
     const preclamped = clampToKorea(items);   // 먼저 외곽선 안으로 초기화
     const resolved   = resolveOverlaps(preclamped); // 경계 인식 겹침 해소
     resolved.forEach(item => placeCard(item));
+    updateLockedCards();
 
     document.getElementById('count-badge').textContent = `${resolved.length}개 대학`;
     fitToCards(resolved);
@@ -483,3 +563,4 @@ async function load() {
 
 drawKoreaOutline();
 load();
+initTimeControl();
