@@ -9,7 +9,7 @@ const SHEET_URL =
 const GEO = { minLat: 33.0, maxLat: 38.7, minLng: 124.5, maxLng: 131.0 };
 const KM_LNG = 111 * Math.cos(36 * Math.PI / 180);
 const KM_LAT = 111;
-const STAGE_W = 4200;
+const STAGE_W = 2000;
 const PX_PER_KM = STAGE_W / ((GEO.maxLng - GEO.minLng) * KM_LNG);
 const STAGE_H = Math.round((GEO.maxLat - GEO.minLat) * KM_LAT * PX_PER_KM);
 
