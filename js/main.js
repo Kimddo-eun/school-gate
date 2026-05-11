@@ -447,9 +447,13 @@ async function load() {
 
     const rawRows = (json.table.rows || []).map(r => {
       const row = (r.c || []).map(cell => (cell && cell.v != null) ? String(cell.v).trim() : '');
-      // 셀 링크 추출 (gviz API: cell.p.link 또는 cell.p.links[0].uri)
-      row.urls = (r.c || []).map(cell => {
-        if (!cell || !cell.p) return '';
+      // 셀 링크 추출 — p 속성이 있는 셀은 콘솔에 구조 출력 (디버깅용)
+      row.urls = (r.c || []).map((cell, idx) => {
+        if (!cell) return '';
+        if (cell.p) {
+          console.log(`[LINK DEBUG] cell[${idx}]`, JSON.stringify(cell));
+        }
+        if (!cell.p) return '';
         if (typeof cell.p.link === 'string') return cell.p.link;
         if (cell.p.links && cell.p.links[0]) return cell.p.links[0].uri || '';
         return '';
