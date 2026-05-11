@@ -9,7 +9,7 @@ const SHEET_URL =
 const GEO = { minLat: 33.0, maxLat: 38.7, minLng: 124.5, maxLng: 131.0 };
 const KM_LNG = 111 * Math.cos(36 * Math.PI / 180);
 const KM_LAT = 111;
-const STAGE_W = 1400;
+const STAGE_W = 4200;
 const PX_PER_KM = STAGE_W / ((GEO.maxLng - GEO.minLng) * KM_LNG);
 const STAGE_H = Math.round((GEO.maxLat - GEO.minLat) * KM_LAT * PX_PER_KM);
 
@@ -383,7 +383,7 @@ function resolveOverlaps(items) {
     return false; // 양쪽 모두 막힘 → 다른 축 시도
   }
 
-  for (let iter = 0; iter < 800; iter++) {
+  for (let iter = 0; iter < 1500; iter++) {
     let hasMoved = false;
     for (let i = 0; i < pts.length; i++) {
       for (let j = i + 1; j < pts.length; j++) {
