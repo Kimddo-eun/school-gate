@@ -566,7 +566,7 @@ async function load() {
     fitToCards(resolved);
 
     setProgress(100, '완료');
-    setTimeout(() => document.getElementById('loader').classList.add('hidden'), 400);
+    setTimeout(() => document.getElementById('loader').classList.add('hidden'), 600);
 
   } catch (e) {
     setProgress(100, '');
