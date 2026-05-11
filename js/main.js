@@ -341,46 +341,40 @@ stageWrap.addEventListener('touchend', e => {
   lastTouches = [...e.touches].map(t => ({ x: t.clientX, y: t.clientY }));
 }, { passive: false });
 
-// ── 겹침 해소 (경계 인식형) ───────────────────────────────────────
+// ── 겹침 해소 ─────────────────────────────────────────────────────
+// 정밀 다각형 대신 바운딩 박스로 경계 체크 → 카드가 더 자유롭게 퍼짐
 function resolveOverlaps(items) {
   const GAP = 8;
   const MIN_DX = CARD_W + GAP, MIN_DY = CARD_H + GAP;
   const pts = items.map(d => ({ ...d }));
 
-  // 한 축 방향으로 겹침 해소 시도.
-  // - 둘 다 이동 가능: 절반씩 분배
-  // - 한쪽만 가능: 막힌 카드 몫까지 떠안아 전체 겹침을 한 번에 해소
-  // - 둘 다 막히면 false 반환 → 호출자가 다른 축을 시도
+  // 한국 윤곽선의 바운딩 박스 + 여백
+  const pxs = KOREA_PX.map(p => p.x), pys = KOREA_PX.map(p => p.y);
+  const bx0 = Math.min(...pxs) - CARD_W * 3, bx1 = Math.max(...pxs) + CARD_W * 3;
+  const by0 = Math.min(...pys) - CARD_H * 3, by1 = Math.max(...pys) + CARD_H * 3;
+  function ok(x, y) { return x >= bx0 && x <= bx1 && y >= by0 && y <= by1; }
+
   function tryAxis(a, b, useX, overlap, diff) {
-    const s    = diff >= 0 ? 1 : -1;
-    const half = overlap / 2 + 1;
-    const full = overlap + 2;
-
-    const nAx = useX ? a.x - s * half : a.x,  nAy = useX ? a.y : a.y - s * half;
-    const nBx = useX ? b.x + s * half : b.x,  nBy = useX ? b.y : b.y + s * half;
-    const fAx = useX ? a.x - s * full : a.x,  fAy = useX ? a.y : a.y - s * full;
-    const fBx = useX ? b.x + s * full : b.x,  fBy = useX ? b.y : b.y + s * full;
-
-    const okA = isInsideKorea(nAx, nAy);
-    const okB = isInsideKorea(nBx, nBy);
-
+    const s = diff >= 0 ? 1 : -1;
+    const half = overlap / 2 + 1, full = overlap + 2;
+    const nAx = useX ? a.x - s * half : a.x, nAy = useX ? a.y : a.y - s * half;
+    const nBx = useX ? b.x + s * half : b.x, nBy = useX ? b.y : b.y + s * half;
+    const fAx = useX ? a.x - s * full : a.x, fAy = useX ? a.y : a.y - s * full;
+    const fBx = useX ? b.x + s * full : b.x, fBy = useX ? b.y : b.y + s * full;
+    const okA = ok(nAx, nAy), okB = ok(nBx, nBy);
     if (okA && okB) {
       if (useX) { a.x = nAx; b.x = nBx; } else { a.y = nAy; b.y = nBy; }
       return true;
     }
     if (!okA && okB) {
-      // A가 막혔으니 B가 전체 겹침 흡수
-      if (useX) b.x = isInsideKorea(fBx, b.y)  ? fBx : nBx;
-      else      b.y = isInsideKorea(b.x,  fBy)  ? fBy : nBy;
+      if (useX) b.x = ok(fBx, b.y) ? fBx : nBx; else b.y = ok(b.x, fBy) ? fBy : nBy;
       return true;
     }
     if (okA && !okB) {
-      // B가 막혔으니 A가 전체 겹침 흡수
-      if (useX) a.x = isInsideKorea(fAx, a.y)  ? fAx : nAx;
-      else      a.y = isInsideKorea(a.x,  fAy)  ? fAy : nAy;
+      if (useX) a.x = ok(fAx, a.y) ? fAx : nAx; else a.y = ok(a.x, fAy) ? fAy : nAy;
       return true;
     }
-    return false; // 양쪽 모두 막힘 → 다른 축 시도
+    return false;
   }
 
   for (let iter = 0; iter < 1500; iter++) {
@@ -391,11 +385,9 @@ function resolveOverlaps(items) {
         const dx = b.x - a.x, dy = b.y - a.y;
         const ox = MIN_DX - Math.abs(dx), oy = MIN_DY - Math.abs(dy);
         if (ox <= 0 || oy <= 0) continue;
-
         const pushed = ox <= oy
           ? (tryAxis(a, b, true,  ox, dx) || tryAxis(a, b, false, oy, dy))
           : (tryAxis(a, b, false, oy, dy) || tryAxis(a, b, true,  ox, dx));
-
         if (pushed) hasMoved = true;
       }
     }
