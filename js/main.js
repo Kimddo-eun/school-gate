@@ -256,7 +256,9 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal
 // ── 시간 제한 ──────────────────────────────────────────────────────
 // startH 이상 endH 미만(시 단위)에만 접근 허용
 const ACCESS_RULES = {
-  '덕성여자대학교': { startH: 9, endH: 21, label: '09:00 – 21:00' },
+  '덕성여자대학교': { startMin: 9*60,    endMin: 21*60,    label: '09:00 – 21:00' },
+  '이화여자대학교': { startMin: 5*60,    endMin: 23*60+59, label: '05:00 – 23:59' },
+  '숙명여자대학교': { startMin: 5*60,    endMin: 22*60,    label: '05:00 – 22:00' },
 };
 let testTime = null; // null이면 실제 시간 사용
 
@@ -265,7 +267,7 @@ function isAccessible(school) {
   if (!rule) return true;
   const now = testTime || new Date();
   const min = now.getHours() * 60 + now.getMinutes();
-  return min >= rule.startH * 60 && min < rule.endH * 60;
+  return min >= rule.startMin && min < rule.endMin;
 }
 
 function openBlockedModal(school) {
