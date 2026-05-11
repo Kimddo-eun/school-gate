@@ -56,6 +56,41 @@ const JEJU_BOUNDARY = [
   [33.25, 126.35], [33.36, 126.12], [33.56, 126.15],
 ];
 
+// 픽셀 좌표계로 사전 변환 (경계 판정용)
+const KOREA_PX = KOREA_BOUNDARY.map(([lat, lng]) => latLngToXY(lat, lng));
+const JEJU_PX  = JEJU_BOUNDARY.map(([lat, lng]) => latLngToXY(lat, lng));
+
+// Ray casting 알고리즘으로 점이 다각형 안에 있는지 판정
+function pointInPoly(px, py, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i].x, yi = poly[i].y;
+    const xj = poly[j].x, yj = poly[j].y;
+    if (((yi > py) !== (yj > py)) &&
+        (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+// 외곽선 밖으로 나간 카드를 중심 방향으로 끌어당김
+function clampToKorea(items) {
+  const cx = KOREA_PX.reduce((s, p) => s + p.x, 0) / KOREA_PX.length;
+  const cy = KOREA_PX.reduce((s, p) => s + p.y, 0) / KOREA_PX.length;
+  return items.map(item => {
+    if (pointInPoly(item.x, item.y, KOREA_PX) ||
+        pointInPoly(item.x, item.y, JEJU_PX)) return item;
+    // 중심을 향해 조금씩 이동 → 내부로 진입하는 순간 채택
+    for (let t = 0.04; t <= 1.01; t += 0.02) {
+      const nx = item.x + (cx - item.x) * t;
+      const ny = item.y + (cy - item.y) * t;
+      if (pointInPoly(nx, ny, KOREA_PX)) return { ...item, x: nx, y: ny };
+    }
+    return { ...item, x: cx, y: cy };
+  });
+}
+
 function drawKoreaOutline() {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', STAGE_W);
@@ -388,10 +423,11 @@ async function load() {
 
     setProgress(85, '배치 중…');
     const resolved = resolveOverlaps(items);
-    resolved.forEach(item => placeCard(item));
+    const clamped  = clampToKorea(resolved);
+    clamped.forEach(item => placeCard(item));
 
-    document.getElementById('count-badge').textContent = `${resolved.length}개 대학`;
-    fitToCards(resolved);
+    document.getElementById('count-badge').textContent = `${clamped.length}개 대학`;
+    fitToCards(clamped);
 
     setProgress(100, '완료');
     setTimeout(() => document.getElementById('loader').classList.add('hidden'), 400);
