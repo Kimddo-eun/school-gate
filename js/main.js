@@ -218,15 +218,21 @@ function openModal(row) {
   if (beam)    tags.push(`<span class="m-tag m-tag-beam">들보 ${beam.split(/[,\s]/)[0]}</span>`);
   document.getElementById('m-tags').innerHTML = tags.join('');
 
+  const urls = row.urls || [];
+  function linkedText(v, url) {
+    const safe = (url && /^https?:\/\//.test(url)) ? url : '';
+    return safe ? `<a href="${safe}" target="_blank" rel="noopener noreferrer">${v}</a>` : v;
+  }
+
   const fields = [
-    ['설치일',    date,        false],
-    ['크기',      size,        false],
-    ['상징성',    symbol,      true],
-    ['공사 역사', constHist,   true],
-    ['학생 역사', studentHist, true],
+    ['설치일',    date,        urls[3],  false],
+    ['크기',      size,        urls[4],  false],
+    ['상징성',    symbol,      urls[5],  true],
+    ['공사 역사', constHist,   urls[9],  true],
+    ['학생 역사', studentHist, urls[10], true],
   ].filter(([, v]) => v);
-  document.getElementById('m-grid').innerHTML = fields.map(([l, v, full]) =>
-    `<div class="m-field${full ? ' full' : ''}"><label>${l}</label><p>${v}</p></div>`
+  document.getElementById('m-grid').innerHTML = fields.map(([l, v, url, full]) =>
+    `<div class="m-field${full ? ' full' : ''}"><label>${l}</label><p>${linkedText(v, url)}</p></div>`
   ).join('');
 
   overlay.classList.add('active');
@@ -439,8 +445,17 @@ async function load() {
     const text = await res.text();
     const json = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
 
-    const rawRows = (json.table.rows || [])
-      .map(r => (r.c || []).map(cell => (cell && cell.v != null) ? String(cell.v).trim() : ''));
+    const rawRows = (json.table.rows || []).map(r => {
+      const row = (r.c || []).map(cell => (cell && cell.v != null) ? String(cell.v).trim() : '');
+      // 셀 링크 추출 (gviz API: cell.p.link 또는 cell.p.links[0].uri)
+      row.urls = (r.c || []).map(cell => {
+        if (!cell || !cell.p) return '';
+        if (typeof cell.p.link === 'string') return cell.p.link;
+        if (cell.p.links && cell.p.links[0]) return cell.p.links[0].uri || '';
+        return '';
+      });
+      return row;
+    });
     const data = rawRows.filter(r => r[1] && r[1] !== '학교' && r[1] !== '학교명');
 
     setProgress(70, '겹침 계산 중…');
