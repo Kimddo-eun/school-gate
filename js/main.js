@@ -74,14 +74,13 @@ function pointInPoly(px, py, poly) {
   return inside;
 }
 
-// 외곽선 밖으로 나간 카드를 중심 방향으로 끌어당김
+// 외곽선 밖으로 나간 카드를 중심 방향으로 끌어당김 (초기 배치 전처리)
 function clampToKorea(items) {
   const cx = KOREA_PX.reduce((s, p) => s + p.x, 0) / KOREA_PX.length;
   const cy = KOREA_PX.reduce((s, p) => s + p.y, 0) / KOREA_PX.length;
   return items.map(item => {
     if (pointInPoly(item.x, item.y, KOREA_PX) ||
         pointInPoly(item.x, item.y, JEJU_PX)) return item;
-    // 중심을 향해 조금씩 이동 → 내부로 진입하는 순간 채택
     for (let t = 0.04; t <= 1.01; t += 0.02) {
       const nx = item.x + (cx - item.x) * t;
       const ny = item.y + (cy - item.y) * t;
@@ -89,6 +88,10 @@ function clampToKorea(items) {
     }
     return { ...item, x: cx, y: cy };
   });
+}
+
+function isInsideKorea(x, y) {
+  return pointInPoly(x, y, KOREA_PX) || pointInPoly(x, y, JEJU_PX);
 }
 
 function drawKoreaOutline() {
@@ -326,32 +329,55 @@ stageWrap.addEventListener('touchend', e => {
   lastTouches = [...e.touches].map(t => ({ x: t.clientX, y: t.clientY }));
 }, { passive: false });
 
-// ── 겹침 해소 (카드 간격 확보) ──────────────────────────────────────
+// ── 겹침 해소 (경계 인식형) ───────────────────────────────────────
+// 카드를 밀 때 외곽선 밖으로 나가지 않도록 체크:
+//  - 둘 다 이동 가능: 절반씩 분배
+//  - 한쪽만 가능: 해당 카드만 이동
+//  - 선호 축이 막히면 다른 축으로 대체
 function resolveOverlaps(items) {
   const GAP = 8;
   const MIN_DX = CARD_W + GAP, MIN_DY = CARD_H + GAP;
   const pts = items.map(d => ({ ...d }));
 
-  for (let iter = 0; iter < 500; iter++) {
-    let moved = false;
+  for (let iter = 0; iter < 600; iter++) {
+    let hasMoved = false;
     for (let i = 0; i < pts.length; i++) {
       for (let j = i + 1; j < pts.length; j++) {
         const a = pts[i], b = pts[j];
         const dx = b.x - a.x, dy = b.y - a.y;
         const ox = MIN_DX - Math.abs(dx), oy = MIN_DY - Math.abs(dy);
-        if (ox > 0 && oy > 0) {
-          if (ox < oy) {
-            const push = ox / 2 + 1, sx = dx >= 0 ? 1 : -1;
-            a.x -= sx * push; b.x += sx * push;
-          } else {
-            const push = oy / 2 + 1, sy = dy >= 0 ? 1 : -1;
-            a.y -= sy * push; b.y += sy * push;
+        if (ox <= 0 || oy <= 0) continue;
+
+        let pushed = false;
+
+        if (ox <= oy) {
+          // X축 우선
+          const sx = dx >= 0 ? 1 : -1, half = ox / 2 + 1;
+          if (isInsideKorea(a.x - sx * half, a.y)) { a.x -= sx * half; pushed = true; }
+          if (isInsideKorea(b.x + sx * half, b.y)) { b.x += sx * half; pushed = true; }
+          // X축 막히면 Y축 대체
+          if (!pushed) {
+            const sy = dy >= 0 ? 1 : -1, halfY = oy / 2 + 1;
+            if (isInsideKorea(a.x, a.y - sy * halfY)) { a.y -= sy * halfY; pushed = true; }
+            if (isInsideKorea(b.x, b.y + sy * halfY)) { b.y += sy * halfY; pushed = true; }
           }
-          moved = true;
+        } else {
+          // Y축 우선
+          const sy = dy >= 0 ? 1 : -1, half = oy / 2 + 1;
+          if (isInsideKorea(a.x, a.y - sy * half)) { a.y -= sy * half; pushed = true; }
+          if (isInsideKorea(b.x, b.y + sy * half)) { b.y += sy * half; pushed = true; }
+          // Y축 막히면 X축 대체
+          if (!pushed) {
+            const sx = dx >= 0 ? 1 : -1, halfX = ox / 2 + 1;
+            if (isInsideKorea(a.x - sx * halfX, a.y)) { a.x -= sx * halfX; pushed = true; }
+            if (isInsideKorea(b.x + sx * halfX, b.y)) { b.x += sx * halfX; pushed = true; }
+          }
         }
+
+        if (pushed) hasMoved = true;
       }
     }
-    if (!moved) break;
+    if (!hasMoved) break;
   }
   return pts;
 }
@@ -422,12 +448,12 @@ async function load() {
     console.log(`[DEBUG] 배치 대상: ${items.length}개`);
 
     setProgress(85, '배치 중…');
-    const resolved = resolveOverlaps(items);
-    const clamped  = clampToKorea(resolved);
-    clamped.forEach(item => placeCard(item));
+    const preclamped = clampToKorea(items);   // 먼저 외곽선 안으로 초기화
+    const resolved   = resolveOverlaps(preclamped); // 경계 인식 겹침 해소
+    resolved.forEach(item => placeCard(item));
 
-    document.getElementById('count-badge').textContent = `${clamped.length}개 대학`;
-    fitToCards(clamped);
+    document.getElementById('count-badge').textContent = `${resolved.length}개 대학`;
+    fitToCards(resolved);
 
     setProgress(100, '완료');
     setTimeout(() => document.getElementById('loader').classList.add('hidden'), 400);
