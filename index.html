@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>대학 정문 아카이브</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -28,8 +27,10 @@
     <div id="count-badge"></div>
   </div>
 
-  <!-- MAP -->
-  <div id="map"></div>
+  <!-- STAGE (지도 대신 커스텀 줌/팬) -->
+  <div id="stage-wrap">
+    <div id="stage"></div>
+  </div>
 
   <!-- MODAL -->
   <div id="overlay">
@@ -48,7 +49,6 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/coords.js"></script>
   <script src="js/main.js"></script>
 </body>
