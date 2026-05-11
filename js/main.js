@@ -330,16 +330,48 @@ stageWrap.addEventListener('touchend', e => {
 }, { passive: false });
 
 // ── 겹침 해소 (경계 인식형) ───────────────────────────────────────
-// 카드를 밀 때 외곽선 밖으로 나가지 않도록 체크:
-//  - 둘 다 이동 가능: 절반씩 분배
-//  - 한쪽만 가능: 해당 카드만 이동
-//  - 선호 축이 막히면 다른 축으로 대체
 function resolveOverlaps(items) {
   const GAP = 8;
   const MIN_DX = CARD_W + GAP, MIN_DY = CARD_H + GAP;
   const pts = items.map(d => ({ ...d }));
 
-  for (let iter = 0; iter < 600; iter++) {
+  // 한 축 방향으로 겹침 해소 시도.
+  // - 둘 다 이동 가능: 절반씩 분배
+  // - 한쪽만 가능: 막힌 카드 몫까지 떠안아 전체 겹침을 한 번에 해소
+  // - 둘 다 막히면 false 반환 → 호출자가 다른 축을 시도
+  function tryAxis(a, b, useX, overlap, diff) {
+    const s    = diff >= 0 ? 1 : -1;
+    const half = overlap / 2 + 1;
+    const full = overlap + 2;
+
+    const nAx = useX ? a.x - s * half : a.x,  nAy = useX ? a.y : a.y - s * half;
+    const nBx = useX ? b.x + s * half : b.x,  nBy = useX ? b.y : b.y + s * half;
+    const fAx = useX ? a.x - s * full : a.x,  fAy = useX ? a.y : a.y - s * full;
+    const fBx = useX ? b.x + s * full : b.x,  fBy = useX ? b.y : b.y + s * full;
+
+    const okA = isInsideKorea(nAx, nAy);
+    const okB = isInsideKorea(nBx, nBy);
+
+    if (okA && okB) {
+      if (useX) { a.x = nAx; b.x = nBx; } else { a.y = nAy; b.y = nBy; }
+      return true;
+    }
+    if (!okA && okB) {
+      // A가 막혔으니 B가 전체 겹침 흡수
+      if (useX) b.x = isInsideKorea(fBx, b.y)  ? fBx : nBx;
+      else      b.y = isInsideKorea(b.x,  fBy)  ? fBy : nBy;
+      return true;
+    }
+    if (okA && !okB) {
+      // B가 막혔으니 A가 전체 겹침 흡수
+      if (useX) a.x = isInsideKorea(fAx, a.y)  ? fAx : nAx;
+      else      a.y = isInsideKorea(a.x,  fAy)  ? fAy : nAy;
+      return true;
+    }
+    return false; // 양쪽 모두 막힘 → 다른 축 시도
+  }
+
+  for (let iter = 0; iter < 800; iter++) {
     let hasMoved = false;
     for (let i = 0; i < pts.length; i++) {
       for (let j = i + 1; j < pts.length; j++) {
@@ -348,31 +380,9 @@ function resolveOverlaps(items) {
         const ox = MIN_DX - Math.abs(dx), oy = MIN_DY - Math.abs(dy);
         if (ox <= 0 || oy <= 0) continue;
 
-        let pushed = false;
-
-        if (ox <= oy) {
-          // X축 우선
-          const sx = dx >= 0 ? 1 : -1, half = ox / 2 + 1;
-          if (isInsideKorea(a.x - sx * half, a.y)) { a.x -= sx * half; pushed = true; }
-          if (isInsideKorea(b.x + sx * half, b.y)) { b.x += sx * half; pushed = true; }
-          // X축 막히면 Y축 대체
-          if (!pushed) {
-            const sy = dy >= 0 ? 1 : -1, halfY = oy / 2 + 1;
-            if (isInsideKorea(a.x, a.y - sy * halfY)) { a.y -= sy * halfY; pushed = true; }
-            if (isInsideKorea(b.x, b.y + sy * halfY)) { b.y += sy * halfY; pushed = true; }
-          }
-        } else {
-          // Y축 우선
-          const sy = dy >= 0 ? 1 : -1, half = oy / 2 + 1;
-          if (isInsideKorea(a.x, a.y - sy * half)) { a.y -= sy * half; pushed = true; }
-          if (isInsideKorea(b.x, b.y + sy * half)) { b.y += sy * half; pushed = true; }
-          // Y축 막히면 X축 대체
-          if (!pushed) {
-            const sx = dx >= 0 ? 1 : -1, halfX = ox / 2 + 1;
-            if (isInsideKorea(a.x - sx * halfX, a.y)) { a.x -= sx * halfX; pushed = true; }
-            if (isInsideKorea(b.x + sx * halfX, b.y)) { b.x += sx * halfX; pushed = true; }
-          }
-        }
+        const pushed = ox <= oy
+          ? (tryAxis(a, b, true,  ox, dx) || tryAxis(a, b, false, oy, dy))
+          : (tryAxis(a, b, false, oy, dy) || tryAxis(a, b, true,  ox, dx));
 
         if (pushed) hasMoved = true;
       }
