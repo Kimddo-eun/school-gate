@@ -218,18 +218,21 @@ function openModal(row) {
   if (beam)    tags.push(`<span class="m-tag m-tag-beam">들보 ${beam.split(/[,\s]/)[0]}</span>`);
   document.getElementById('m-tags').innerHTML = tags.join('');
 
-  const urls = row.urls || [];
+  // M열(index 12) = 공사역사 링크 URL, N열(index 13) = 학생역사 링크 URL
+  function safeUrl(v) { return (v && /^https?:\/\//.test(v)) ? v : ''; }
   function linkedText(v, url) {
-    const safe = (url && /^https?:\/\//.test(url)) ? url : '';
-    return safe ? `<a href="${safe}" target="_blank" rel="noopener noreferrer">${v}</a>` : v;
+    return url ? `<a href="${url}" target="_blank" rel="noopener noreferrer">${v}</a>` : v;
   }
 
+  const constHistUrl   = safeUrl(row[12] || '');
+  const studentHistUrl = safeUrl(row[13] || '');
+
   const fields = [
-    ['설치일',    date,        urls[3],  false],
-    ['크기',      size,        urls[4],  false],
-    ['상징성',    symbol,      urls[5],  true],
-    ['공사 역사', constHist,   urls[9],  true],
-    ['학생 역사', studentHist, urls[10], true],
+    ['설치일',    date,        '',            false],
+    ['크기',      size,        '',            false],
+    ['상징성',    symbol,      '',            true],
+    ['공사 역사', constHist,   constHistUrl,  true],
+    ['학생 역사', studentHist, studentHistUrl, true],
   ].filter(([, v]) => v);
   document.getElementById('m-grid').innerHTML = fields.map(([l, v, url, full]) =>
     `<div class="m-field${full ? ' full' : ''}"><label>${l}</label><p>${linkedText(v, url)}</p></div>`
@@ -445,21 +448,10 @@ async function load() {
     const text = await res.text();
     const json = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
 
-    const rawRows = (json.table.rows || []).map(r => {
-      const row = (r.c || []).map(cell => (cell && cell.v != null) ? String(cell.v).trim() : '');
-      // 셀 링크 추출 — p 속성이 있는 셀은 콘솔에 구조 출력 (디버깅용)
-      row.urls = (r.c || []).map((cell, idx) => {
-        if (!cell) return '';
-        if (cell.p) {
-          console.log(`[LINK DEBUG] cell[${idx}]`, JSON.stringify(cell));
-        }
-        if (!cell.p) return '';
-        if (typeof cell.p.link === 'string') return cell.p.link;
-        if (cell.p.links && cell.p.links[0]) return cell.p.links[0].uri || '';
-        return '';
-      });
-      return row;
-    });
+    // gviz API는 셀 하이퍼링크를 전달하지 않으므로 텍스트 값만 추출
+    // 링크 URL은 별도 열(M=공사역사링크, N=학생역사링크)로 관리
+    const rawRows = (json.table.rows || [])
+      .map(r => (r.c || []).map(cell => (cell && cell.v != null) ? String(cell.v).trim() : ''));
     const data = rawRows.filter(r => r[1] && r[1] !== '학교' && r[1] !== '학교명');
 
     setProgress(70, '겹침 계산 중…');
